@@ -1,4 +1,4 @@
-CXX=g++
+CXX=cl
 NVCC=nvcc
 DISTTYPE=__USE_COS_DIST
 
