@@ -1,0 +1,125 @@
+# Windows builds.
+name: Compile-Windows
+on: 
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: 'Tag of release branch'
+        required: true
+  
+jobs:
+  check-version-and-create-branch:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - uses: actions-ecosystem/action-regex-match@v2
+        id: regex-match
+        with:
+          text: ${{ github.event.inputs.release-tag }}
+          # https://www.python.org/dev/peps/pep-0440
+          # [N!]N(.N)*[{a|b|rc}N][.postN][.devN]
+          regex: '^([1-9][0-9]*!)?(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))*((a|b|rc)(0|[1-9][0-9]*))?(\.post(0|[1-9][0-9]*))?(\.dev(0|[1-9][0-9]*))?$'
+      - name: Check branch name
+        if: steps.regex-match.outputs.match == ''
+        run: echo "Given release tag wrong, quit." && exit 1
+      - uses: actions/checkout@master
+      - name: Create tag
+        uses: tvdias/github-tagger@v0.0.2
+        with:
+          repo-token: ${{ secrets.PUSH_TO_RELEASE }}
+          tag: v${{ github.event.inputs.release-tag }}
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.PUSH_TO_RELEASE }}
+          branch: v${{ github.event.inputs.release-tag }}
+          tags: true
+          force: true
+  build:
+    needs: [check-version-and-create-branch]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      # explicit include-based build matrix, of known valid options
+      matrix:
+        include:
+          # Windows-2022 & VS 2022 supports 11.6+
+          - os: windows-2022
+            cuda: "12.0.0"
+            visual_studio: "Visual Studio 17 2022"
+          - os: windows-2022
+            cuda: "11.8.0"
+            visual_studio: "Visual Studio 17 2022"
+          - os: windows-2022
+            cuda: "11.7.0"
+            visual_studio: "Visual Studio 17 2022"
+          - os: windows-2022
+            cuda: "11.6.0"
+            visual_studio: "Visual Studio 17 2022"
+          # Windows-2019 & VS 2019 supports 10.1+
+          - os: windows-2019
+            cuda: "11.5.0"
+            visual_studio: "Visual Studio 16 2019"
+          - os: windows-2019
+            cuda: "11.4.0"
+            visual_studio: "Visual Studio 16 2019"
+          - os: windows-2019
+            cuda: "11.3.0"
+            visual_studio: "Visual Studio 16 2019"
+          - os: windows-2019
+            cuda: "11.2.0"
+            visual_studio: "Visual Studio 16 2019"
+          - os: windows-2019
+            cuda: "11.1.0"
+            visual_studio: "Visual Studio 16 2019"
+          - os: windows-2019
+            cuda: "11.0.1"
+            visual_studio: "Visual Studio 16 2019"
+          - os: windows-2019
+            cuda: "10.2.89"
+            visual_studio: "Visual Studio 16 2019"
+          - os: windows-2019
+            cuda: "10.1.243"
+            visual_studio: "Visual Studio 16 2019"
+
+    env:
+      build_dir: "build"
+      config: "Release"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: v${{ github.event.inputs.release-tag }}
+    - name: Install CUDA
+      env: 
+        cuda: ${{ matrix.cuda }}
+        visual_studio: ${{ matrix.visual_studio }}
+      shell: powershell
+      run: .\scripts\actions\install_cuda_windows.ps1
+
+    - name: nvcc check
+      shell: powershell
+      run: |
+        nvcc -V
+        ls $env:CUDA_PATH
+        ls $env:CUDA_PATH\bin
+        ls $env:CUDA_PATH\include
+    - name: build flow
+      shell: bash
+      run: |
+        PQ_SIZE=26
+        ./generate_template.sh
+        ./fill_parameters.sh $PQ_SIZE 384 ip
+        cd hnsw/examples/cpp
+        make all
+        ls build_template/tmp/*
+        ls hnsw/examples/cpp/*
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          build_template/tmp/*.exe
+          hnsw/examples/cpp/*.exe
+        tag_name: v${{ github.event.inputs.release-tag }}
+        name: Release ${{ github.event.inputs.release-tag }}
