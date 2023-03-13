@@ -109,14 +109,15 @@ jobs:
       shell: bash
       run: |
         ./generate_template.sh
+        PQ_SIZE=26
+        ./fill_parameters.sh $PQ_SIZE 384 ip
         echo $PATH
     - name: build flow
       shell: powershell
       run: |
-        echo $PATH
-        exit 1
-        PQ_SIZE=26
-        ./fill_parameters.sh $PQ_SIZE 384 ip
+        cd build_template/tmp
+        make song DISTTYPE=__USE_IP_DIST
+        cd ../../
         cd hnsw/examples/cpp
         make all
         ls build_template/tmp/*
