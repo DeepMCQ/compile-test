@@ -52,15 +52,15 @@ sed -i -e "s/PLACE_HOLDER_DIM/${dim}/g" *.h
 sed -i -e "s/PLACE_HOLDER_DIM/${dim}/g" *.cu
 sed -i -e "s/PLACE_HOLDER_DIM/${dim}/g" *.cc
 
-if [ "${dis}" = "cos" ]; then
-	make song
-elif [ "${dis}" = "l2" ]; then
-	make song DISTTYPE=__USE_L2_DIST
-elif [ "${dis}" = "ip" ]; then
-	make song DISTTYPE=__USE_IP_DIST
-else
-	echo "Usage: $0 <pq_size> <dim> <cos/l2/ip>" >&2
-	echo "For example: $0 100 26 cos" >&2
-	exit 1
-fi
+# if [ "${dis}" = "cos" ]; then
+# 	make song
+# elif [ "${dis}" = "l2" ]; then
+# 	make song DISTTYPE=__USE_L2_DIST
+# elif [ "${dis}" = "ip" ]; then
+# 	make song DISTTYPE=__USE_IP_DIST
+# else
+# 	echo "Usage: $0 <pq_size> <dim> <cos/l2/ip>" >&2
+# 	echo "For example: $0 100 26 cos" >&2
+# 	exit 1
+# fi
 
